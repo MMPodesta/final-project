@@ -21,43 +21,37 @@ snail_rectangle = snail_surface.get_rect(midbottom=(600, 300))
 # player
 player_surface = pygame.image.load("assets/player_walk_1.png").convert_alpha()
 player_rectangle = player_surface.get_rect(midbottom=(80, 300))
+player_gravity = 0
 
 while True:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             pygame.quit()
             exit()
-        # if event.type == pygame.MOUSEMOTION:
-        #    if player_rectangle.collidepoint(event.pos):print("collision")
-        if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_SPACE:
-                print("jump")
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            if player_rectangle.collidepoint(event.pos):
+                player_gravity = -20
 
-        if event.type == pygame.KEYUP:
-            print("key up")
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_SPACE and player_rectangle.bottom == 300:
+                player_gravity = -20
 
     screen.blit(sky_surface, (0, 0))
     screen.blit(ground_surface, (0, 300))
     pygame.draw.rect(screen, "#c0e8ec", score_rectangle)
     pygame.draw.rect(screen, "#c0e8ec", score_rectangle, 10)
-
     screen.blit(score_surface, score_rectangle)
 
     snail_rectangle.x -= 4
     if snail_rectangle.right <= 0: snail_rectangle.left = 800
     screen.blit(snail_surface, snail_rectangle)
+
+    # Player
+    player_gravity += 1
+    player_rectangle.y += player_gravity
+    if player_rectangle.bottom >= 300:
+        player_rectangle.bottom = 300
     screen.blit(player_surface, player_rectangle)
-
-    #keys = pygame.key.get_pressed()
-    #if keys[pygame.K_SPACE]:
-    #    print("jump")
-
-    # if player_rectangle.colliderect(snail_rectangle):
-    #    print("collision")
-
-    # mouse_pos = pygame.mouse.get_pos()
-    # if player_rectangle.collidepoint(mouse_pos):
-    #    print(pygame.mouse.get_pressed())
 
     pygame.display.update()
     clock.tick(60)  # loop should not run faster than 60x/second
