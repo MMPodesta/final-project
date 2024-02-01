@@ -1,5 +1,6 @@
 import pygame
 from sys import exit
+from random import randint
 
 
 def display_score():
@@ -8,6 +9,31 @@ def display_score():
     score_rectangle = score_surface.get_rect(center=(400, 50))
     screen.blit(score_surface, score_rectangle)
     return current_time
+
+
+def obstacle_movement(obstacle_list):
+    if obstacle_list:
+        for obstacle_rectangle in obstacle_list:
+            obstacle_rectangle.x -= 5
+
+            if obstacle_rectangle.bottom == 300:
+                screen.blit(snail_surface, obstacle_rectangle)
+            else:
+                screen.blit(fly_surface, obstacle_rectangle)
+
+        obstacle_list = [obstacle for obstacle in obstacle_list if obstacle.x > -100]
+        return obstacle_list
+
+    else:
+        return []
+
+
+def collisions(player, obstacles):
+    if obstacles:
+        for obstacle_rectangle in obstacles:
+            if player.colliderect(obstacle_rectangle):
+                return False
+    return True
 
 
 pygame.init()
@@ -26,9 +52,11 @@ ground_surface = pygame.image.load("assets/ground.png").convert()
 # score_surface = test_font.render("My Game", False, (64, 64, 64))
 # score_rectangle = score_surface.get_rect(center=(400, 50))
 
-# snail
+# Obstacles
 snail_surface = pygame.image.load("assets/snail1.png").convert_alpha()
-snail_rectangle = snail_surface.get_rect(midbottom=(600, 300))
+fly_surface = pygame.image.load("assets/Fly1.png").convert_alpha()
+
+obstacle_rectangle_list = []
 
 # player
 player_surface = pygame.image.load("assets/player_walk_1.png").convert_alpha()
@@ -46,6 +74,10 @@ game_name_rectangle = game_name.get_rect(center=(400, 80))
 game_message = test_font.render("Press space to run", False, (111, 196, 169))
 game_message_rectangle = game_message.get_rect(center=(400, 330))
 
+# Timer
+obstacle_timer = pygame.USEREVENT + 1  # avoid conflict with reserved by '+1'
+pygame.time.set_timer(obstacle_timer, 1500)
+
 while True:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -60,10 +92,16 @@ while True:
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_SPACE and player_rectangle.bottom == 300:
                     player_gravity = -20
+
+            if event.type == obstacle_timer:
+                if randint(0, 2):
+                    obstacle_rectangle_list.append(snail_surface.get_rect(bottomright=(randint(900, 1100), 300)))
+                else:
+                    obstacle_rectangle_list.append(snail_surface.get_rect(bottomright=(randint(900, 1100), 210)))
+
         else:
             if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
                 game_active = True
-                snail_rectangle.left = 800
                 start_time = int(pygame.time.get_ticks() / 1000)
 
     if game_active:
@@ -76,9 +114,9 @@ while True:
         score = display_score()
 
         # Snail
-        snail_rectangle.x -= 4
-        if snail_rectangle.right <= 0: snail_rectangle.left = 800
-        screen.blit(snail_surface, snail_rectangle)
+        # snail_rectangle.x -= 4
+        # if snail_rectangle.right <= 0: snail_rectangle.left = 800
+        # screen.blit(snail_surface, snail_rectangle)
 
         # Player
         player_gravity += 1
@@ -87,12 +125,18 @@ while True:
             player_rectangle.bottom = 300
         screen.blit(player_surface, player_rectangle)
 
+        # Obstacles movement
+        obstacle_rectangle_list = obstacle_movement(obstacle_rectangle_list)
+
         # collision
-        if snail_rectangle.colliderect(player_rectangle):
-            game_active = False
+        game_active = collisions(player_rectangle, obstacle_rectangle_list)
+
     else:
         screen.fill((94, 129, 162))
         screen.blit(player_stand, player_stand_rectangle)
+        obstacle_rectangle_list.clear()
+        player_rectangle.midbottom = (80, 300)
+        player_gravity = 0
 
         score_message = test_font.render(f'Your score: {score}', False, (111, 196, 169))
         score_message_rectangle = score_message.get_rect(center=(400, 330))
