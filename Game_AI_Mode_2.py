@@ -1,3 +1,4 @@
+import copy
 import random
 import pygame
 from sys import exit
@@ -6,7 +7,7 @@ import numpy as np
 
 
 class Player(pygame.sprite.Sprite):
-    def __init__(self):
+    def __init__(self, neural_network):
         super().__init__()
         player_walk_1 = pygame.image.load("assets/player_walk_1.png").convert_alpha()
         player_walk_2 = pygame.image.load("assets/player_walk_2.png").convert_alpha()
@@ -15,8 +16,9 @@ class Player(pygame.sprite.Sprite):
         self.player_jump = pygame.image.load("assets/jump.png").convert_alpha()
 
         self.image = self.player_walk[self.player_index]
-        self.rect = self.image.get_rect(midbottom=(80, 300))
+        self.rect = self.image.get_rect(midbottom=(random.randint(20, 150), 300))
         self.gravity = 0
+        self.neural_network = neural_network
 
     def player_input(self):
         keys = pygame.key.get_pressed()
@@ -108,22 +110,16 @@ def display_score():
     return current_time
 
 
-def collision_sprite():
+def collision_sprite(player):
+    best_player_neural_network = None
+
     if pygame.sprite.spritecollide(player.sprite, obstacle_group, False):
-        obstacle_group.empty()
+        if len(players_list) == 1:
+            best_player_neural_network = player.sprite.neural_network
+        player.sprite.kill()
+        players_list.remove(player)
 
-        if score > previous_score:
-            nn.explore_low()
-            print(nn.input_weights)
-            print(nn.output_weights)
-        else:
-            nn.explore_Deep()
-            print(nn.input_weights)
-            print(nn.output_weights)
-
-        return False
-    else:
-        return True
+    return best_player_neural_network
 
 
 def relu(x):
@@ -141,31 +137,25 @@ class NeuralNetwork:
     def __init__(self):
         # Generate random numbers from -1 to 1
         self.input_weights = 2 * np.random.random((1, 4)) - 1  # 1 input to 4 hidden neurons
-        print(self.input_weights)
+        #print(self.input_weights)
 
         self.output_weights = 2 * np.random.random((5, 1)) - 1  # (4 hidden neurons + 1 bias) = 5 to 1 output
-        print(self.output_weights)
+        #print(self.output_weights)
 
     def forward(self, inputs):
         # Multiply input by 4 input weights and store all 4 results in 4 neurons in the hidden layer
         self.hidden_layer = relu(np.dot(inputs, self.input_weights))
-        print("hidden layer:", self.hidden_layer)
+        #print("hidden layer:", self.hidden_layer)
 
         # Store 1 extra value in hidden layer as number 1(bias)
         self.hidden_layer = np.append(self.hidden_layer, 1)
-        print("hidden layer with bias:", self.hidden_layer)
+        #print("hidden layer with bias:", self.hidden_layer)
 
         # Multiply all (4 neuron values + bias) by 5 output weights
         # Then sum all 5 values into a single output result
         output_layer = sigmoid(np.dot(self.hidden_layer, self.output_weights))
-        print("output layer:", output_layer)
+        #print("output layer:", output_layer)
         return output_layer
-
-    def explore_Deep(self):
-        # Generate random numbers from -1 to 1
-        self.input_weights = 2 * np.random.random((1, 4)) - 1  # 1 input to 4 hidden neurons
-
-        self.output_weights = 2 * np.random.random((5, 1)) - 1  # (4 hidden neurons + 1 bias) = 5 to 1 output
 
     def explore_low(self):
         # Randomly select an index for the weight to modify in the input layer
@@ -182,10 +172,34 @@ class NeuralNetwork:
         self.input_weights[0, input_index_to_modify] = new_input_weight
         self.output_weights[output_index_to_modify, 0] = new_output_weight
 
+    def explore_very_low(self):
+        # Decide randomly whether to modify an input or output weight
+        modify_input = np.random.choice([True, False])
+
+        if modify_input:
+            # Randomly select an index for the weight to modify in the input layer
+            input_index_to_modify = np.random.randint(0, self.input_weights.shape[1])
+            # Calculate the change amount (between 0.1 and 0.5) and determine the direction (add or subtract)
+            change_amount = np.random.uniform(0.1, 0.5) * np.random.choice([-1, 1])
+            # Update the selected weight
+            self.input_weights[0, input_index_to_modify] += change_amount
+            # Ensure the updated weight stays within [-1, 1] bounds
+            self.input_weights[0, input_index_to_modify] = np.clip(self.input_weights[0, input_index_to_modify], -1, 1)
+        else:
+            # Randomly select an index for the weight to modify in the output layer
+            output_index_to_modify = np.random.randint(0, self.output_weights.shape[0])
+            # Calculate the change amount (between 0.1 and 0.5) and determine the direction (add or subtract)
+            change_amount = np.random.uniform(0.1, 0.5) * np.random.choice([-1, 1])
+            # Update the selected weight
+            self.output_weights[output_index_to_modify, 0] += change_amount
+            # Ensure the updated weight stays within [-1, 1] bounds
+            self.output_weights[output_index_to_modify, 0] = np.clip(self.output_weights[output_index_to_modify, 0], -1,
+                                                                     1)
+
 
 # Example of using the network
 # Initialize the neural network
-nn = NeuralNetwork()
+
 
 pygame.init()
 screen = pygame.display.set_mode((800, 400))  # width and height
@@ -201,8 +215,11 @@ generation = 1
 threshold = 0.5
 
 # Groups
-player = pygame.sprite.GroupSingle()
-player.add(Player())
+players_list = []
+for i in range(500):
+    players_list.append(pygame.sprite.GroupSingle())
+    players_list[i].add(Player(NeuralNetwork()))
+
 obstacle_group = pygame.sprite.Group()
 
 # Background
@@ -246,45 +263,44 @@ while True:
         score = display_score()
 
         # Player
-        player.draw(screen)
-        player.update()
+        for player in players_list:
+            player.draw(screen)
+            player.update()
 
         # Obstacles
         obstacle_group.draw(screen)
         obstacle_group.update()
 
-        # collision
-        game_active = collision_sprite()
+        for player in players_list:
+            # collision
+            best_player_neural_network = collision_sprite(player)
 
         # AI
         # Calculate horizontal distance to the closest obstacle in front of the player for every frame
-        closest_obstacle_distance = min(
-            [(obstacle.rect.x - player.sprite.rect.x) for obstacle in obstacle_group.sprites() if
-             obstacle.rect.x > player.sprite.rect.x],
-            default=0
-        )
+        for player in players_list:
+            closest_obstacle_distance = min(
+                [(obstacle.rect.x - player.sprite.rect.x) for obstacle in obstacle_group.sprites() if
+                 obstacle.rect.x > player.sprite.rect.x],
+                default=0
+            )
+            # horizontal distance to obstacle
+            inputs = np.array([closest_obstacle_distance]).reshape(1, -1)
 
-        print(closest_obstacle_distance)
+            # Getting the decision from the network (whether to jump or not)
+            decision = player.sprite.neural_network.forward(inputs)
 
-        # horizontal distance to obstacle
-        inputs = np.array([closest_obstacle_distance]).reshape(1, -1)
+            if decision > threshold:
+                player.sprite.AI_programmatic_jump()
 
-        # Getting the decision from the network (whether to jump or not)
-        decision = nn.forward(inputs)
-
-        if decision > threshold:
-            player.sprite.AI_programmatic_jump()
-
-        print("Decision:", decision)
+        if len(players_list) == 0:
+            obstacle_group.empty()
+            game_active = False
 
     else:
         screen.fill((94, 129, 162))
         screen.blit(player_stand, player_stand_rectangle)
 
-        player_gravity = 0
-
         previous_score = score
-
         if score > best_score:
             best_score = score
 
@@ -298,6 +314,19 @@ while True:
         else:
             screen.blit(score_message, score_message_rectangle)
             generation += 1
+
+            for i in range(500):
+                # Make a deep copy of the neural network for each player
+                neural_network_copy = copy.deepcopy(best_player_neural_network)
+
+                players_list.append(pygame.sprite.GroupSingle())
+                players_list[i].add(Player(neural_network_copy))
+
+                # Now modifications to the neural network only affect the individual player
+                players_list[i].sprite.neural_network.explore_very_low()
+
+                print(players_list[i].sprite.neural_network.input_weights)
+            print("\n")
             game_active = True
             start_time = int(pygame.time.get_ticks() / 1000)
 
