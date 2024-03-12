@@ -53,12 +53,13 @@ class Player(pygame.sprite.Sprite):
 class Obstacle(pygame.sprite.Sprite):
     def __init__(self, obstacle_type):
         super().__init__()
+        self.obstacle_type = obstacle_type
 
-        if obstacle_type == "fly":
+        if self.obstacle_type == "fly":
             fly_1 = pygame.image.load("assets/Fly1.png").convert_alpha()
             fly_2 = pygame.image.load("assets/Fly2.png").convert_alpha()
             self.frames = [fly_1, fly_2]
-            y_pos = 300
+            y_pos = 150
         else:
             snail_1 = pygame.image.load("assets/snail1.png").convert_alpha()
             snail_2 = pygame.image.load("assets/snail2.png").convert_alpha()
@@ -136,7 +137,7 @@ def sigmoid(x):
 class NeuralNetwork:
     def __init__(self):
         # Generate random numbers from -1 to 1
-        self.input_weights = 2 * np.random.random((1, 4)) - 1  # 1 input to 4 hidden neurons
+        self.input_weights = 2 * np.random.random((2, 4)) - 1  # 1 input to 4 hidden neurons
         #print(self.input_weights)
 
         self.output_weights = 2 * np.random.random((5, 1)) - 1  # (4 hidden neurons + 1 bias) = 5 to 1 output
@@ -216,7 +217,7 @@ threshold = 0.5
 
 # Groups
 players_list = []
-for i in range(500):
+for i in range(10):
     players_list.append(pygame.sprite.GroupSingle())
     players_list[i].add(Player(NeuralNetwork()))
 
@@ -278,19 +279,32 @@ while True:
         # AI
         # Calculate horizontal distance to the closest obstacle in front of the player for every frame
         for player in players_list:
-            closest_obstacle_distance = min(
-                [(obstacle.rect.x - player.sprite.rect.x) for obstacle in obstacle_group.sprites() if
-                 obstacle.rect.x > player.sprite.rect.x],
-                default=0
-            )
-            # horizontal distance to obstacle
-            inputs = np.array([closest_obstacle_distance]).reshape(1, -1)
+            # Extract obstacles that are ahead of the player
+            obstacles_ahead = [(obstacle, obstacle.rect.x - player.sprite.rect.x) for obstacle in
+                               obstacle_group.sprites() if obstacle.rect.x > player.sprite.rect.x]
 
-            # Getting the decision from the network (whether to jump or not)
-            decision = player.sprite.neural_network.forward(inputs)
+            # Sort obstacles by their distance from the player (ascending order)
+            obstacles_ahead.sort(key=lambda x: x[1])
 
-            if decision > threshold:
-                player.sprite.AI_programmatic_jump()
+            if obstacles_ahead:
+                is_snail = 800
+                # Closest obstacle and its distances
+                closest_obstacle, closest_obstacle_distance_x = obstacles_ahead[0]
+
+                # Now, you can directly use the Y position of the closest obstacle
+                # closest_obstacle_y_position = closest_obstacle.rect.y
+
+                if closest_obstacle.obstacle_type == "fly":
+                    is_snail = 0
+
+                # horizontal distance to obstacle
+                inputs = np.array([closest_obstacle_distance_x, is_snail]).reshape(1, -1)
+
+                # Getting the decision from the network (whether to jump or not)
+                decision = player.sprite.neural_network.forward(inputs)
+
+                if decision > threshold:
+                    player.sprite.AI_programmatic_jump()
 
         if len(players_list) == 0:
             obstacle_group.empty()
@@ -315,7 +329,7 @@ while True:
             screen.blit(score_message, score_message_rectangle)
             generation += 1
 
-            for i in range(500):
+            for i in range(10):
                 # Make a deep copy of the neural network for each player
                 neural_network_copy = copy.deepcopy(best_player_neural_network)
 
@@ -323,7 +337,10 @@ while True:
                 players_list[i].add(Player(neural_network_copy))
 
                 # Now modifications to the neural network only affect the individual player
-                players_list[i].sprite.neural_network.explore_very_low()
+                if i > 8:
+                    players_list[i].sprite.neural_network.explore_low()
+                else:
+                    players_list[i].sprite.neural_network.explore_very_low()
 
                 print(players_list[i].sprite.neural_network.input_weights)
             print("\n")
