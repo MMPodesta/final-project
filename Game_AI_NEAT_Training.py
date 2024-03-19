@@ -5,6 +5,7 @@ from sys import exit
 from random import choice
 import neat
 import os
+import pickle
 
 start_time = 0
 generation = 0
@@ -386,8 +387,13 @@ def run(config_path):
     stats = neat.StatisticsReporter()
     p.add_reporter(stats)
 
-    winner = p.run(main, 200)
+    winner = p.run(main, 4)
     print('\nBest genome:\n{!s}'.format(winner))
+
+    # Save the winner
+    with open("winner.pkl", "wb") as f:
+        pickle.dump(winner, f)
+    print("Winner saved to winner.pkl")
 
 
 if __name__ == "__main__":
