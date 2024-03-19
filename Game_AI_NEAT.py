@@ -212,6 +212,7 @@ def main(genomes, config):
     game_active = True
     max_distance_x = 1000
     threshold = 0.5
+    fitness_threshold_reached = False
 
     # start list of players
     players_list = []
@@ -251,8 +252,8 @@ def main(genomes, config):
 
             if game_active:
                 if event.type == obstacle_timer:
-                    obstacle_group.add(Obstacle(choice(["coin", "water", "water", "fly", "fly", "snail", "snail",
-                                                        "snail"])))
+                    obstacle_group.add(Obstacle(choice(["coin", "water", "fly", "fly", "fly", "snail", "snail",
+                                                        "snail", "snail", "snail"])))
 
         if game_active:
             # Background
@@ -280,8 +281,12 @@ def main(genomes, config):
             # Calculate horizontal distance to the closest obstacle in front of the player for every frame
             for player in players_list:
                 # Extract obstacles that are ahead of the player
-                obstacles_ahead = [(obstacle, obstacle.rect.x - player.sprite.rect.x) for obstacle in
-                                   obstacle_group.sprites() if obstacle.rect.x > player.sprite.rect.x]
+                # obstacles_ahead = [(obstacle, obstacle.rect.x - player.sprite.rect.x) for obstacle in
+                #                    obstacle_group.sprites() if obstacle.rect.x > player.sprite.rect.x]
+
+                # Extract obstacles that are ahead of the player or overlapping with the player from the right side
+                obstacles_ahead = [(obstacle, obstacle.rect.right - player.sprite.rect.left) for obstacle in
+                                   obstacle_group.sprites() if obstacle.rect.right > player.sprite.rect.left]
 
                 # Sort obstacles by their distance from the player (ascending order)
                 obstacles_ahead.sort(key=lambda x: x[1])
@@ -296,6 +301,7 @@ def main(genomes, config):
 
                     # Get the closest obstacle and its distances
                     closest_obstacle, closest_obstacle_distance_x = obstacles_ahead[0]
+                    #print(closest_obstacle.obstacle_type)
 
                     # Normalize the distance to be between 0 and 1
                     # Smaller the distance, higher the value
@@ -323,20 +329,20 @@ def main(genomes, config):
                     # Run input on network and get output
                     output = player.sprite.neural_network.activate(input_to_network)
 
-                    # print("Distance:", normalized_distance_x)
+                    #print("Distance:", normalized_distance_x)
                     # print("isEnemy:", isEnemy)
                     # print("isCoin:", isCoin)
                     # print("isHigh:", isHigh)
                     # print("isMid:", isMid)
                     # print("isLow:", isLow)
 
-                    #print(player.sprite.genome.fitness)
+                    print(player.sprite.genome.fitness)
 
                     should_jump = output[0] > threshold
                     should_duck = output[1] > threshold
 
-                    print("jump:", should_jump)
-                    print("duck:", should_duck)
+                    #print("jump:", should_jump)
+                    #print("duck:", should_duck)
 
                     if should_jump:
                         player.sprite.AI_programmatic_jump()
@@ -350,11 +356,15 @@ def main(genomes, config):
                     if not should_jump and not should_duck:
                         player.sprite.stop_AI_ducking()
 
+                    #print("fitness:", player.sprite.genome.fitness)
                     # if output[0] > threshold:
                     #     player.sprite.AI_programmatic_jump()
                     #     player.sprite.genome.fitness -= 0.02
 
-            if len(players_list) == 0:
+                    if player.sprite.genome.fitness > 100:
+                        fitness_threshold_reached = True
+
+            if len(players_list) == 0 or fitness_threshold_reached:
                 start_time = int(pygame.time.get_ticks() / 1000)  # reset timer (score)
                 generation += 1  # increase generation
                 break
@@ -376,7 +386,7 @@ def run(config_path):
     stats = neat.StatisticsReporter()
     p.add_reporter(stats)
 
-    winner = p.run(main, 50)
+    winner = p.run(main, 200)
     print('\nBest genome:\n{!s}'.format(winner))
 
 
