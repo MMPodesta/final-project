@@ -281,10 +281,6 @@ def main(genomes, config):
             # AI
             # Calculate horizontal distance to the closest obstacle in front of the player for every frame
             for player in players_list:
-                # Extract obstacles that are ahead of the player
-                # obstacles_ahead = [(obstacle, obstacle.rect.x - player.sprite.rect.x) for obstacle in
-                #                    obstacle_group.sprites() if obstacle.rect.x > player.sprite.rect.x]
-
                 # Extract obstacles that are ahead of the player or overlapping with the player from the right side
                 obstacles_ahead = [(obstacle, obstacle.rect.right - player.sprite.rect.left) for obstacle in
                                    obstacle_group.sprites() if obstacle.rect.right > player.sprite.rect.left]
@@ -337,7 +333,7 @@ def main(genomes, config):
                     # print("isMid:", isMid)
                     # print("isLow:", isLow)
 
-                    print(player.sprite.genome.fitness)
+                    #print(player.sprite.genome.fitness)
 
                     should_jump = output[0] > threshold
                     should_duck = output[1] > threshold
