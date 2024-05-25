@@ -54,11 +54,6 @@ class Player(pygame.sprite.Sprite):
         self.is_ducking = False
         self.rect.height = self.player_walk[0].get_height()  # Reset the hitbox height
 
-    def AI_programmatic_jump(self):
-        # Only allow jumping if the player is on the ground and not ducking
-        if self.rect.bottom >= 300 and not self.is_ducking:
-            self.gravity = -20
-
     def apply_gravity(self):
         self.gravity += 1
         self.rect.y += self.gravity
@@ -180,7 +175,7 @@ def collision_sprite():
 
             else:
                 obstacle_group.empty()
-                print("test")
+                print("Game Over")
                 return False
     else:
         return True
@@ -188,7 +183,7 @@ def collision_sprite():
 
 pygame.init()
 screen = pygame.display.set_mode((800, 400))  # width and height
-pygame.display.set_caption("My Game")
+pygame.display.set_caption("Normal Game Mode")
 clock = pygame.time.Clock()
 test_font = pygame.font.Font("assets/Pixeltype.ttf", 50)
 game_active = False
@@ -213,7 +208,7 @@ player_stand = pygame.image.load("assets/player_stand.png").convert_alpha()
 player_stand = pygame.transform.rotozoom(player_stand, 0, 2)
 player_stand_rectangle = player_stand.get_rect(center=(400, 200))
 
-game_name = test_font.render("Pixel Runner", False, (111, 196, 169))
+game_name = test_font.render("2D Runner", False, (111, 196, 169))
 game_name_rectangle = game_name.get_rect(center=(400, 80))
 
 game_message = test_font.render("Press space to run", False, (111, 196, 169))
