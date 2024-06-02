@@ -181,11 +181,11 @@ def main(genomes, config):
             if obstacle.obstacle_type == "coin":
                 if player not in obstacle.collected_by:
                     obstacle.collected_by.add(player)  # Assure player only collects reward once
-                    player.sprite.genome.fitness += 10  # Reward the player
+                    player.sprite.genome.fitness += 20  # Reward the player
 
             else:
                 # Handle other obstacle types (enemy)
-                player.sprite.genome.fitness -= 3
+                player.sprite.genome.fitness -= 10
                 player.sprite.kill()
                 players_list.remove(player)  # Remove player from the game
                 break  # Exit the loop because player is dead and other collisions don't matter
@@ -327,7 +327,7 @@ def main(genomes, config):
                         player.sprite.stop_AI_ducking()
 
                     # Ensure game resets and players can learn to collect coins beside surviving
-                    if player.sprite.genome.fitness > 100:
+                    if player.sprite.genome.fitness > 75:
                         fitness_threshold_reached = True
 
             if len(players_list) == 0 or fitness_threshold_reached:
@@ -352,7 +352,7 @@ def run(config_path):
     stats = neat.StatisticsReporter()
     p.add_reporter(stats)
 
-    winner = p.run(main, 4)  # Define generation threshold
+    winner = p.run(main, 50)  # Define generation threshold
     print('\nBest genome:\n{!s}'.format(winner))
 
     # Save the winner as a pkl file to be demonstrated

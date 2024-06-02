@@ -188,7 +188,6 @@ def collision_sprite(player):
         if obstacle.obstacle_type == "coin":
             if player not in obstacle.collected_by:
                 obstacle.collected_by.add(player)  # Ensure player collects reward only one time
-                print("coin collected")
 
         # obstacle is an enemy
         else:
@@ -290,7 +289,7 @@ game_active = False
 max_distance_x = 1000
 start_time = 0
 score = 0
-score_threshold = 30
+score_threshold = 500
 previous_score = 0
 best_score = 0
 generation = 1
